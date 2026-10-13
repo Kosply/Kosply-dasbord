@@ -1,4 +1,24 @@
+# Dependencies
 node_modules/
+
+# Next.js build output
+.next/
+out/
 dist/
-.DS_Store
+
+# Environment files (never commit real values — see .env.example)
+.env
+.env.local
+.env*.local
 *.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Agent/editor tooling state — local only, never part of the app
+.commandcode/
+
+# OS files
+.DS_Store
