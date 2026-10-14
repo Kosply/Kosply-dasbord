@@ -1,0 +1,81 @@
+/**
+ * @title Global stylesheet + design tokens + component classes
+ * @notice Single source of truth for the Kosply Admin palette, radii, base
+ * @notice typography, and the reusable component classes every component
+ * @notice shares. Imported once from `app/layout.jsx`.
+ * @dev Lives OUTSIDE `app/` on purpose: `app/` is the router (pages, layouts,
+ * @dev route handlers), style assets belong to the project, not to a route.
+ * @dev Colour tokens are stored as space-separated RGB triplets because
+ * @dev Tailwind's `rgb(var(--token) / <alpha-value>)` pattern needs them to
+ * @dev keep opacity utilities (`bg-brand/10`) working.
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Brand palette — values lifted from the UI/UX Figma slice. */
+  --color-brand: 108 79 166; /* #6C4FA6 — sidebar, primary buttons, links */
+  --color-brand-dark: 91 63 145; /* #5B3F91 — hover state for primary actions */
+  --color-brand-light: 139 111 194; /* #8B6FC2 — light accent */
+  --color-surface: 247 245 251; /* #F7F5FB — page background */
+  --color-surface-alt: 241 237 249; /* #F1EDF9 — table headers, segmented pills */
+  --color-border: 230 225 242; /* #E6E1F2 — card borders, dividers */
+
+  /* Shape tokens. */
+  --radius-card: 1rem;
+}
+
+/**
+ * @notice Base document font.
+ * @dev `--font-inter` is injected by `next/font` in `app/layout.jsx`; the
+ * @dev system stack stays as the fallback for a slow or failed font load.
+ */
+body {
+  font-family: var(--font-inter), system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/**
+ * @notice Reusable component classes.
+ * @dev Every class below is an exact `@apply` of the utilities the components
+ * @dev used inline before, so moving them here changes no rendered pixel — it
+ * @dev only removes the repeated utility strings from the JSX.
+ * @dev Shape tweaks that differ per usage (padding, width, radius) stay as
+ * @dev inline utilities next to the class, e.g. `btn-brand px-4 py-3`.
+ */
+@layer components {
+  /** @notice White rounded surface used by cards, tables and panels. */
+  .card-surface {
+    @apply rounded-2xl border border-border bg-white;
+  }
+
+  /** @notice Brand-coloured primary action (login submit, reply, empty-state CTA). */
+  .btn-brand {
+    @apply bg-brand text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  /** @notice Text field used by the login and reply forms. */
+  .input-field {
+    @apply w-full rounded-xl border border-border bg-white px-4 py-3 text-sm outline-none placeholder:text-gray-400 focus:ring-2 focus:ring-brand;
+  }
+
+  /** @notice Sidebar navigation pill; active/inactive colours stay in JSX. */
+  .sidebar-link {
+    @apply flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors;
+  }
+
+  /** @notice Square icon button base for table row actions. */
+  .icon-button {
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors;
+  }
+
+  /** @notice Rounded search field wrapper (top bar and table toolbars). */
+  .search-pill {
+    @apply flex items-center gap-2 rounded-full border border-border px-4 text-sm text-gray-500;
+  }
+
+  /** @notice Segmented filter pill group ("Today / 7D / 30D", "All / High Priority"). */
+  .segmented-control {
+    @apply flex gap-1 rounded-full bg-surface-alt p-1 text-xs font-medium text-gray-600;
+  }
+}
