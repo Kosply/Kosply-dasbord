@@ -1,45 +1,41 @@
 import Layout from '@/components/layout/Layout';
 import Card from '@/components/ui/Card';
 import StatCard from '@/components/ui/StatCard';
+import SegmentedControl from '@/components/ui/SegmentedControl';
 import EmptyState from '@/components/states/EmptyState';
 import ErrorState from '@/components/states/ErrorState';
 import { ToolUsageFooter, ToolUsageList } from '@/components/tools/ToolUsageList';
 import { getToolStats } from '@/lib/resources/tools';
+import { parseDays, queryValue } from '@/lib/utils/filters';
 import { ROUTES } from '@/lib/routes';
 
 export const metadata = {
   title: ROUTES.toolsBenchmark.title,
 };
 
-/**
- * @notice Render strategy: SSR on every request.
- * @dev Counters must track invocations live; caching would freeze the benchmark
- * @dev right when a demo runs.
- */
 export const dynamic = 'force-dynamic';
+
+const DAYS_OPTIONS = [
+  { value: '1', label: 'Today' },
+  { value: '7', label: '7D' },
+  { value: '30', label: '30D' },
+];
 
 /**
  * @title Tools Benchmark page
- * @notice AI tool usage ranking, success rate and latency for the window.
- * @dev Data flow: this Server Component → `lib/resources/tools.js` →
- * @dev `GET /api/tools/stats?days=30` on Express (ADMIN-only; aggregates the
- * @dev `tool_invocations` table) → KPI tiles + ranked tool list. The rows and
- * @dev footer come from `components/tools/ToolUsageList.jsx`, shared with the
- * @dev dashboard's usage card so the two surfaces cannot drift.
- * @dev Content mapping notes (the old slicing showed placeholder numbers):
- * @dev  • the per-row `Conv:` line is now real "Sukses / rata-rata" values,
- * @dev  • the fake "Cache Hit Ratio" is replaced by the real average latency,
- * @dev  • the active window pill marks 30D because that is the window the API
- * @dev    is queried with (the switcher itself is not wired yet).
- * @returns {Promise<JSX.Element>} Benchmark page.
+ * @param {object} props Page props.
+ * @param {Promise<Record<string, string | string[] | undefined>>} [props.searchParams] URL search params.
  */
-export default async function ToolsBenchmarkPage() {
+export default async function ToolsBenchmarkPage({ searchParams }) {
+  const query = searchParams ? await searchParams : {};
+  const days = parseDays(queryValue(query, 'days', '30'));
+
   /** @type {import('@/types').ToolStats | null} */
   let stats = null;
   let loadError = null;
 
   try {
-    ({ item: stats } = await getToolStats({ days: 30 }));
+    ({ item: stats } = await getToolStats({ days }));
   } catch (error) {
     loadError = error;
   }
@@ -57,7 +53,7 @@ export default async function ToolsBenchmarkPage() {
         />
       ) : (
         <>
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard label="Total Tool Invocations" value={stats.total} />
             <StatCard label="Tools Accuracy" value={`${stats.successRate}%`} />
             <StatCard label="Tools Succeeds" value={stats.succeeded} />
@@ -66,24 +62,25 @@ export default async function ToolsBenchmarkPage() {
 
           <h2 className="mb-4 mt-8 text-xl font-bold text-gray-900">Tools</h2>
 
-          <Card className="p-6">
-            <div className="mb-4 flex items-center justify-between">
+          <Card className="p-4 sm:p-6">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="text-lg font-bold text-gray-900">AI Tool Usage Frequency</h3>
-              <div className="segmented-control">
-                <span className="px-3 py-1">Today</span>
-                <span className="px-3 py-1">7D</span>
-                <span className="rounded-full bg-white px-3 py-1 shadow-sm">30D</span>
-              </div>
+              <SegmentedControl
+                param="days"
+                value={String(days)}
+                fallback="30"
+                options={DAYS_OPTIONS}
+              />
             </div>
 
             {tools.length === 0 ? (
               <EmptyState
                 title="Belum ada invocations"
-                description="Tidak ada pemanggilan tool pada 30 hari terakhir — isi database dev dengan ./seed.sh dashboard di backend."
+                description={`Tidak ada pemanggilan tool pada ${days} hari terakhir — isi database dev dengan ./seed.sh dashboard di backend.`}
               />
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-x-10">
+                <div className="grid grid-cols-1 gap-x-10 gap-y-2 md:grid-cols-2">
                   <ToolUsageList items={tools.slice(0, half)} />
                   <ToolUsageList items={tools.slice(half)} />
                 </div>

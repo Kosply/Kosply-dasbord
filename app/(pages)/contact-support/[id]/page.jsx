@@ -79,8 +79,8 @@ export default async function TicketDetailPage({ params }) {
         <ArrowLeft size={14} /> Kembali ke daftar tiket
       </Link>
 
-      <Card className="p-6">
-        <div className="mb-6 grid grid-cols-4 gap-4 text-sm">
+      <Card className="p-4 sm:p-6">
+        <div className="mb-6 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
           <div>
             <p className="text-gray-500">Subject</p>
             <p className="font-semibold text-gray-900">{ticket.subject}</p>

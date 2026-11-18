@@ -1,13 +1,16 @@
 'use server';
 
 import { cookies } from 'next/headers';
+import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
-import { loginAdmin } from '@/lib/auth/admins';
+import { createAdmin, loginAdmin, updateAdminMe } from '@/lib/auth/admins';
 import { AUTH_ENABLED } from '@/lib/api/config';
 import {
+  buildAdminProfileCookie,
   buildClearedSessionCookies,
   buildSessionCookies,
+  getSessionAdmin,
 } from '@/lib/auth/session';
 import { ROUTES } from '@/lib/routes';
 
@@ -72,4 +75,70 @@ export async function logoutAction() {
     store.set(name, value, options);
   }
   redirect(AUTH_ENABLED ? '/login' : '/');
+}
+
+/** @notice Password rule shared with the backend admin-registration contract. */
+const MIN_ADMIN_PASSWORD = 12;
+
+/**
+ * @notice Updates the signed-in operator's own name and username.
+ * @dev `PATCH /api/admin/users/me` refuses email and password changes, so this
+ * @dev form only sends `name` and an optional `username`, then rewrites the
+ * @dev profile cookie the top bar reads.
+ * @param {{ error?: string, ok?: boolean } | null} _prev Previous form state.
+ * @param {FormData} formData Fields `name` and `username`.
+ * @returns {Promise<{ error?: string, ok?: boolean }>} Next form state.
+ */
+export async function updateProfileAction(_prev, formData) {
+  const name = String(formData.get('name') || '').trim();
+  const username = String(formData.get('username') || '').trim();
+  if (name.length < 2) return { error: 'Nama minimal 2 karakter.' };
+
+  let updated;
+  try {
+    updated = await updateAdminMe({ name, ...(username ? { username } : {}) });
+  } catch (error) {
+    return { error: error?.message || 'Gagal memperbarui profil.' };
+  }
+
+  const current = await getSessionAdmin();
+  const store = await cookies();
+  const cookie = buildAdminProfileCookie({ ...(current || {}), ...(updated || {}), name });
+  store.set(cookie.name, cookie.value, cookie.options);
+  revalidatePath('/', 'layout');
+  return { ok: true };
+}
+
+/**
+ * @notice Registers another admin account.
+ * @dev `POST /api/admin/users` is SUPER_ADMIN only and requires a password of
+ * @dev at least 12 characters. There is no list endpoint, so success is
+ * @dev reported on the form instead of a new table row.
+ * @param {{ error?: string, ok?: boolean } | null} _prev Previous form state.
+ * @param {FormData} formData Fields `name`, `username`, `email`, `password`, `role`.
+ * @returns {Promise<{ error?: string, ok?: boolean }>} Next form state.
+ */
+export async function createAdminAction(_prev, formData) {
+  const name = String(formData.get('name') || '').trim();
+  const username = String(formData.get('username') || '').trim();
+  const email = String(formData.get('email') || '').trim();
+  const password = String(formData.get('password') || '');
+  const role = String(formData.get('role') || 'ADMIN');
+
+  if (name.length < 2) return { error: 'Nama minimal 2 karakter.' };
+  if (username.length < 3) return { error: 'Username minimal 3 karakter.' };
+  if (!EMAIL_RE.test(email)) return { error: 'Format email tidak valid.' };
+  if (password.length < MIN_ADMIN_PASSWORD) {
+    return { error: `Password admin minimal ${MIN_ADMIN_PASSWORD} karakter.` };
+  }
+  if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') return { error: 'Role tidak dikenal.' };
+
+  try {
+    await createAdmin({ name, username, email, password, role });
+  } catch (error) {
+    return { error: error?.message || 'Gagal menambah admin.' };
+  }
+
+  revalidatePath(ROUTES.settings.path);
+  return { ok: true };
 }

@@ -1,13 +1,14 @@
+import AppShell from './AppShell';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 
 /**
  * @title Layout
- * @notice Page shell used by every dashboard route: fixed sidebar, top bar and
- * @notice a scrollable main column with an optional page title.
- * @dev Server-compatible composition — `Sidebar` is a Client Component (it
- * @dev needs `usePathname` for the active pill) and `TopBar` is an async Server
- * @dev Component (it reads the session cookie).
+ * @notice Page shell used by every dashboard route: sidebar, top bar and a
+ * @notice scrollable main column with an optional page title.
+ * @dev `AppShell` is the client frame (mobile menu). `Sidebar` is a Client
+ * @dev Component (`usePathname`) and `TopBar` is an async Server Component
+ * @dev (session cookie). Passing them in as children keeps that split.
  */
 
 /**
@@ -19,15 +20,8 @@ import TopBar from './TopBar';
  */
 export default function Layout({ title, children }) {
   return (
-    <div className="flex h-screen bg-surface">
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <TopBar />
-        <main className="flex-1 overflow-y-auto px-8 py-6">
-          {title ? <h1 className="mb-6 text-2xl font-bold text-gray-900">{title}</h1> : null}
-          {children}
-        </main>
-      </div>
-    </div>
+    <AppShell title={title} sidebar={<Sidebar />} topbar={<TopBar />}>
+      {children}
+    </AppShell>
   );
 }
