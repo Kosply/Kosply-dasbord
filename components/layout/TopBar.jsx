@@ -1,5 +1,8 @@
-import { Search, Bell } from 'lucide-react';
+import { Search } from 'lucide-react';
+import NotificationMenu from './NotificationMenu';
+import ProfileMenu from './ProfileMenu';
 import { getSessionAdmin } from '@/lib/auth/session';
+import { ROUTES } from '@/lib/routes';
 
 /**
  * @title TopBar
@@ -18,31 +21,21 @@ export default async function TopBar() {
   const admin = await getSessionAdmin();
 
   return (
-    <header className="flex items-center gap-4 border-b border-border bg-white px-8 py-4">
-      <div className="search-pill flex-1 py-2.5">
-        <Search size={18} className="text-gray-400" />
+    <header className="flex min-w-0 items-center gap-2 bg-white px-3 py-3 sm:gap-4 sm:px-6 sm:py-4">
+      <form action={ROUTES.userVerification.path} className="search-pill min-w-0 flex-1 py-2.5">
+        <Search size={18} className="shrink-0 text-gray-400" />
         <input
-          type="text"
+          type="search"
+          name="q"
           placeholder="Cari student name, id.."
-          className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400"
+          aria-label="Cari mahasiswa"
+          className="w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-gray-400"
         />
-      </div>
+      </form>
 
-      <button
-        type="button"
-        className="relative flex h-10 w-10 items-center justify-center rounded-full border border-border text-gray-600"
-      >
-        <Bell size={18} />
-        <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
-      </button>
+      <NotificationMenu />
 
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 overflow-hidden rounded-full bg-surface-alt" />
-        <div className="leading-tight">
-          <p className="text-sm font-semibold text-gray-900">{admin?.name ?? 'Tamu'}</p>
-          <p className="text-xs text-gray-500">{admin?.email ?? 'Belum masuk'}</p>
-        </div>
-      </div>
+      <ProfileMenu admin={admin} />
     </header>
   );
 }

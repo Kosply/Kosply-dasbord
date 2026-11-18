@@ -1,65 +1,88 @@
-import { Search } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import Card from '@/components/ui/Card';
 import Table from '@/components/ui/Table';
 import ActionButton from '@/components/ui/ActionButton';
 import StatusBadge from '@/components/ui/StatusBadge';
+import SegmentedControl from '@/components/ui/SegmentedControl';
+import SearchField from '@/components/ui/SearchField';
+import QueryDropdown from '@/components/ui/Dropdown';
 import EmptyState from '@/components/states/EmptyState';
 import ErrorState from '@/components/states/ErrorState';
 import { reviewReportAction } from '@/app/_actions/reports';
 import { listReports } from '@/lib/resources/reports';
 import { formatReportCategory } from '@/lib/utils/format';
+import {
+  filterReports,
+  paginate,
+  parsePage,
+  queryValue,
+} from '@/lib/utils/filters';
 import { ROUTES } from '@/lib/routes';
 
 export const metadata = {
   title: ROUTES.fraudReports.title,
 };
 
-/**
- * @notice Render strategy: SSR on every request.
- * @dev Moderation queues must never show a stale decision, so the list is
- * @dev re-fetched per request; decisions re-enter through Server Actions.
- */
 export const dynamic = 'force-dynamic';
+
+const PILL_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: 'high', label: 'High Priority' },
+  { value: 'nim', label: 'Flagged NIM' },
+];
+
+const STATUS_OPTIONS = [
+  { value: 'ALL', label: 'Semua Status' },
+  { value: 'PENDING', label: 'Pending' },
+  { value: 'IN_REVIEW', label: 'In Review' },
+  { value: 'RESOLVED', label: 'Resolved' },
+  { value: 'REJECTED', label: 'Rejected' },
+];
 
 /**
  * @title Fraud & Moderation Workspace
- * @notice Lists every fraud report and exposes the three enforcement actions.
- * @dev Data flow: this Server Component → `lib/reports.js` → `GET /api/reports`
- * @dev (Express, ADMIN-only) → table rows. Row buttons are *bound Server
- * @dev Actions* (`reviewReportAction.bind(null, id, action)`): clicking them
- * @dev runs `POST /api/reports/:id/review` on Express and then
- * @dev `revalidatePath('/fraud-reports')` repaints this table with fresh data.
- * @dev Enforcement mapping: "Beri peringatan" → `WARNING`, "Eskalasi laporan"
- * @dev → `DELETE_PRODUCT` (archive the listing), "Blokir pengguna" → `BAN_USER`.
- * @returns {Promise<JSX.Element>} Fraud workspace page.
+ * @param {object} props Page props.
+ * @param {Promise<Record<string, string | string[] | undefined>>} [props.searchParams] URL search params.
  */
-export default async function FraudReportsPage() {
+export default async function FraudReportsPage({ searchParams }) {
+  const query = searchParams ? await searchParams : {};
+  const q = queryValue(query, 'q', '');
+  const pill = queryValue(query, 'pill', 'all');
+  const status = queryValue(query, 'status', 'ALL');
+  const requestedPage = parsePage(queryValue(query, 'page', '1'));
+
   /** @type {import('@/types').Report[]} */
   let reports = [];
   let loadError = null;
 
   try {
-    reports = await listReports();
+    reports = await listReports(status !== 'ALL' ? { status } : {});
   } catch (error) {
     loadError = error;
   }
 
+  const filtered = filterReports(reports, { q, pill });
+  const { items, current, totalPages } = paginate(filtered, requestedPage);
+
   return (
     <Layout title={ROUTES.fraudReports.title}>
-      <Card className="p-6">
-        <div className="mb-4 flex items-center justify-between">
+      <Card className="p-4 sm:p-6">
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <h2 className="text-lg font-bold text-gray-900">Fraud Reports</h2>
-          <div className="flex items-center gap-3">
-            <div className="search-pill py-2">
-              <Search size={16} />
-              <input placeholder="Filter by NIM..." className="w-40 bg-transparent outline-none" />
-            </div>
-            <div className="segmented-control">
-              <span className="rounded-full bg-white px-3 py-1.5 shadow-sm">All</span>
-              <span className="px-3 py-1.5">High Priority</span>
-              <span className="px-3 py-1.5">Flagged NIM</span>
-            </div>
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
+            <SearchField placeholder="Filter by NIM / ID..." className="w-full sm:w-48" />
+            <QueryDropdown
+              param="status"
+              label="Status"
+              fallback="ALL"
+              options={STATUS_OPTIONS}
+            />
+            <SegmentedControl
+              param="pill"
+              value={pill}
+              fallback="all"
+              options={PILL_OPTIONS}
+            />
           </div>
         </div>
 
@@ -69,44 +92,54 @@ export default async function FraudReportsPage() {
             error={loadError}
             description={`${loadError.message} — pastikan backend Express berjalan dan sesi admin aktif.`}
           />
-        ) : reports.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <EmptyState
             title="Belum ada laporan"
-            description="Laporan fraud dari pengguna akan tampil di sini."
+            description="Laporan fraud yang cocok dengan filter saat ini akan tampil di sini."
           />
         ) : (
-          <Table columns={['Report ID', 'Reporter', 'Fraud', 'Category', 'Status', 'Action']}>
-            {reports.map((report) => (
+          <Table
+            columns={['Report ID', 'Reporter', 'Fraud', 'Category', 'Status', 'Action']}
+            page={current}
+            totalPages={totalPages}
+          >
+            {items.map((report) => (
               <tr key={report.id}>
-                <td className="px-6 py-4 font-medium text-gray-900">{report.reportNo}</td>
-                <td className="px-6 py-4 text-gray-700">{report.reporterId}</td>
-                <td className="px-6 py-4 text-gray-700">
+                <td className="whitespace-nowrap px-4 py-3 font-medium text-gray-900 sm:px-6 sm:py-4">
+                  {report.reportNo}
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-gray-700 sm:px-6 sm:py-4">
+                  {report.reporterId}
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-gray-700 sm:px-6 sm:py-4">
                   {report.reportedUserId || report.reportedProductId || '—'}
                 </td>
-                <td className="px-6 py-4 text-gray-700">{formatReportCategory(report.category)}</td>
-                <td className="px-6 py-4">
+                <td className="whitespace-nowrap px-4 py-3 text-gray-700 sm:px-6 sm:py-4">
+                  {formatReportCategory(report.category)}
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 sm:px-6 sm:py-4">
                   <StatusBadge status={report.status} />
                 </td>
-                <td className="px-6 py-4">
+                <td className="whitespace-nowrap px-4 py-3 sm:px-6 sm:py-4">
                   {report.status === 'PENDING' ? (
                     <div className="flex gap-2">
                       <ActionButton
                         icon="warning"
                         variant="amber"
                         label="Beri peringatan"
-                        onClick={reviewReportAction.bind(null, report.id, 'WARNING')}
+                        action={reviewReportAction.bind(null, report.id, 'WARNING')}
                       />
                       <ActionButton
                         icon="escalate"
                         variant="orange"
                         label="Eskalasi laporan"
-                        onClick={reviewReportAction.bind(null, report.id, 'DELETE_PRODUCT')}
+                        action={reviewReportAction.bind(null, report.id, 'DELETE_PRODUCT')}
                       />
                       <ActionButton
                         icon="ban"
                         variant="red"
                         label="Blokir pengguna"
-                        onClick={reviewReportAction.bind(null, report.id, 'BAN_USER')}
+                        action={reviewReportAction.bind(null, report.id, 'BAN_USER')}
                       />
                     </div>
                   ) : (
