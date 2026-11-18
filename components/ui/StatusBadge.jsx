@@ -1,5 +1,3 @@
-import { ChevronDown } from 'lucide-react';
-
 /**
  * @title StatusBadge
  * @notice Dot + label status marker used in moderation tables.
@@ -26,7 +24,6 @@ export default function StatusBadge({ status = 'Active' }) {
     >
       <span className={`h-2 w-2 rounded-full ${isHealthy ? 'bg-green-500' : 'bg-gray-400'}`} />
       {status}
-      <ChevronDown size={14} />
     </span>
   );
 }

@@ -172,11 +172,10 @@ export default async function UserVerificationPage({ searchParams }) {
                         icon="check"
                         variant="purple"
                         label="Verifikasi mahasiswa"
-                        action={reviewVerificationAction.bind(null, verification.id, 'APPROVE')}
+                        onClick={reviewVerificationAction.bind(null, verification.id, 'APPROVE')}
                       />
                       <RejectButton
-                        applicantName={verification.namaLengkap}
-                        onReject={reviewVerificationAction.bind(null, verification.id, 'REJECT')}
+                        action={reviewVerificationAction.bind(null, verification.id, 'REJECT')}
                       />
                     </div>
                   ) : (

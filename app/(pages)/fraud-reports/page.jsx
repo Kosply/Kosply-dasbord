@@ -127,19 +127,19 @@ export default async function FraudReportsPage({ searchParams }) {
                         icon="warning"
                         variant="amber"
                         label="Beri peringatan"
-                        action={reviewReportAction.bind(null, report.id, 'WARNING')}
+                        onClick={reviewReportAction.bind(null, report.id, 'WARNING')}
                       />
                       <ActionButton
                         icon="escalate"
                         variant="orange"
                         label="Eskalasi laporan"
-                        action={reviewReportAction.bind(null, report.id, 'DELETE_PRODUCT')}
+                        onClick={reviewReportAction.bind(null, report.id, 'DELETE_PRODUCT')}
                       />
                       <ActionButton
                         icon="ban"
                         variant="red"
                         label="Blokir pengguna"
-                        action={reviewReportAction.bind(null, report.id, 'BAN_USER')}
+                        onClick={reviewReportAction.bind(null, report.id, 'BAN_USER')}
                       />
                     </div>
                   ) : (

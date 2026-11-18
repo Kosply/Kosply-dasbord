@@ -17,25 +17,32 @@ import { NextResponse } from 'next/server';
 const SESSION_COOKIE = 'kosply_token';
 
 /**
- * @notice Redirects unsigned visitors to `/login` while the gate is enabled.
- * @dev With `AUTH_ENABLED=false` (default, login flow still in progress) the
- * @dev proxy steps aside and pages render directly.
+ * @notice Sends unsigned visitors to `/login`, and keeps the AI Model screen hidden.
+ * @dev `AUTH_ENABLED=true` (local default) requires a session cookie before any
+ * @dev dashboard route renders. `false` is an explicit local bypass.
+ * @dev `/ai-model` stays in the tree but is not a screen: signed-in visits bounce
+ * @dev to the dashboard, unsigned visits hit the login gate first.
  * @param {import('next/server').NextRequest} request Incoming request.
- * @returns {import('next/server').NextResponse} Pass-through or login redirect.
+ * @returns {import('next/server').NextResponse} Pass-through or redirect.
  */
 export default function proxy(request) {
-  if (process.env.AUTH_ENABLED !== 'true') {
-    return NextResponse.next();
+  const { pathname } = request.nextUrl;
+  const hiddenModel = pathname === '/ai-model' || pathname.startsWith('/ai-model/');
+
+  if (process.env.AUTH_ENABLED === 'true') {
+    const hasSession = Boolean(request.cookies.get(SESSION_COOKIE)?.value);
+    if (!hasSession) {
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('from', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
   }
 
-  const hasSession = Boolean(request.cookies.get(SESSION_COOKIE)?.value);
-  if (hasSession) {
-    return NextResponse.next();
+  if (hiddenModel) {
+    return NextResponse.redirect(new URL('/', request.url));
   }
 
-  const loginUrl = new URL('/login', request.url);
-  loginUrl.searchParams.set('from', request.nextUrl.pathname);
-  return NextResponse.redirect(loginUrl);
+  return NextResponse.next();
 }
 
 /**
