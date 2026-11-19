@@ -1,13 +1,12 @@
 import Layout from '@/components/layout/Layout';
 import Card from '@/components/ui/Card';
 import Table from '@/components/ui/Table';
-import ActionButton from '@/components/ui/ActionButton';
 import StatusBadge from '@/components/ui/StatusBadge';
-import SegmentedControl from '@/components/ui/SegmentedControl';
 import SearchField from '@/components/ui/SearchField';
 import QueryDropdown from '@/components/ui/Dropdown';
 import EmptyState from '@/components/states/EmptyState';
 import ErrorState from '@/components/states/ErrorState';
+import ReportActions from '@/components/reports/ReportActions';
 import { reviewReportAction } from '@/app/_actions/reports';
 import { listReports } from '@/lib/resources/reports';
 import { formatReportCategory } from '@/lib/utils/format';
@@ -25,19 +24,14 @@ export const metadata = {
 
 export const dynamic = 'force-dynamic';
 
-const PILL_OPTIONS = [
-  { value: 'all', label: 'All' },
-  { value: 'high', label: 'High Priority' },
-  { value: 'nim', label: 'Flagged NIM' },
-];
-
 const STATUS_OPTIONS = [
-  { value: 'ALL', label: 'Semua Status' },
-  { value: 'PENDING', label: 'Pending' },
+  { value: 'ALL', label: 'All' },
   { value: 'IN_REVIEW', label: 'In Review' },
   { value: 'RESOLVED', label: 'Resolved' },
   { value: 'REJECTED', label: 'Rejected' },
 ];
+
+const REPORT_STATUSES = ['IN_REVIEW', 'RESOLVED', 'REJECTED'];
 
 /**
  * @title Fraud & Moderation Workspace
@@ -47,8 +41,8 @@ const STATUS_OPTIONS = [
 export default async function FraudReportsPage({ searchParams }) {
   const query = searchParams ? await searchParams : {};
   const q = queryValue(query, 'q', '');
-  const pill = queryValue(query, 'pill', 'all');
-  const status = queryValue(query, 'status', 'ALL');
+  const requestedStatus = queryValue(query, 'status', 'ALL');
+  const status = REPORT_STATUSES.includes(requestedStatus) ? requestedStatus : 'ALL';
   const requestedPage = parsePage(queryValue(query, 'page', '1'));
 
   /** @type {import('@/types').Report[]} */
@@ -56,12 +50,20 @@ export default async function FraudReportsPage({ searchParams }) {
   let loadError = null;
 
   try {
-    reports = await listReports(status !== 'ALL' ? { status } : {});
+    // Pending is omitted. In review is still undecided, so it stays in All.
+    if (status === 'ALL') {
+      const groups = await Promise.all(REPORT_STATUSES.map((item) => listReports({ status: item })));
+      reports = groups.flat().sort(
+        (left, right) => new Date(right.updatedAt || right.createdAt) - new Date(left.updatedAt || left.createdAt),
+      );
+    } else {
+      reports = await listReports({ status });
+    }
   } catch (error) {
     loadError = error;
   }
 
-  const filtered = filterReports(reports, { q, pill });
+  const filtered = filterReports(reports, { q });
   const { items, current, totalPages } = paginate(filtered, requestedPage);
 
   return (
@@ -76,12 +78,6 @@ export default async function FraudReportsPage({ searchParams }) {
               label="Status"
               fallback="ALL"
               options={STATUS_OPTIONS}
-            />
-            <SegmentedControl
-              param="pill"
-              value={pill}
-              fallback="all"
-              options={PILL_OPTIONS}
             />
           </div>
         </div>
@@ -121,27 +117,12 @@ export default async function FraudReportsPage({ searchParams }) {
                   <StatusBadge status={report.status} />
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 sm:px-6 sm:py-4">
-                  {report.status === 'PENDING' ? (
-                    <div className="flex gap-2">
-                      <ActionButton
-                        icon="warning"
-                        variant="amber"
-                        label="Beri peringatan"
-                        action={reviewReportAction.bind(null, report.id, 'WARNING')}
-                      />
-                      <ActionButton
-                        icon="escalate"
-                        variant="orange"
-                        label="Eskalasi laporan"
-                        action={reviewReportAction.bind(null, report.id, 'DELETE_PRODUCT')}
-                      />
-                      <ActionButton
-                        icon="ban"
-                        variant="red"
-                        label="Blokir pengguna"
-                        action={reviewReportAction.bind(null, report.id, 'BAN_USER')}
-                      />
-                    </div>
+                  {report.status === 'IN_REVIEW' ? (
+                    <ReportActions
+                      reportNo={report.reportNo}
+                      onWarn={reviewReportAction.bind(null, report.id, 'WARNING')}
+                      onBan={reviewReportAction.bind(null, report.id, 'BAN_USER')}
+                    />
                   ) : (
                     <span className="text-xs text-gray-400">Sudah diputuskan</span>
                   )}

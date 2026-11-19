@@ -29,20 +29,19 @@ Ringkas, kalau Docker + dependensi sudah siap dan `.env` sudah diisi:
 ```bash
 cd ../Kosply-backend
 docker compose up -d mariadb
-./scripts/dev.sh setup && ./scripts/dev.sh start   # server di :3000
+./scripts/dev.sh setup && ./scripts/dev.sh start   # server di :3500
 ./seed.sh                                          # data dashboard
 ```
 
-> Catatan: `npm run dev` frontend memakai port **:3000**, jadi di satu mesin
-> jalankan backend di port lain — mis. `PORT=3500 ./scripts/dev.sh start` —
-> lalu samakan `API_URL` di `.env.local`.
+> `dev.sh` memaksa API ke **:3500**. `PORT=3000` di `.env` backend dipakai PM2,
+> bukan stack lokal. Dashboard tidak boleh ikut port itu.
 
 ### 2. Frontend (repo ini)
 
 ```bash
 npm install
-cp .env.example .env.local   # sesuaikan API_URL dengan port backend
-npm run dev                  # http://localhost:3000
+cp .env.example .env.local   # API_URL=http://localhost:3500
+npm run dev                  # http://localhost:3001
 ```
 
 `.env.local`:
@@ -56,7 +55,7 @@ AUTH_ENABLED=false              # flag gerbang login (lihat bagian Login)
 
 ```bash
 npm run build   # screenshot hasil build dilampirkan untuk UTS
-npm start
+npm start       # http://localhost:3001
 ```
 
 ## Struktur folder
