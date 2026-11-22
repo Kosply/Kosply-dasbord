@@ -26,29 +26,34 @@ export default function ModelFormDialog({ mode, model, pending, serverError, onC
   function onSubmit(event) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    const modelId = String(data.get('modelId') || '').trim();
+    // A disabled input is omitted from FormData, so an edit reads the id from
+    // the row. The PATCH body leaves `modelId` out: the backend treats it as
+    // optional on update, and resending it is not required to rename or reprice.
+    const modelId = String((editing ? model?.modelId : data.get('modelId')) || '').trim();
     const name = String(data.get('name') || '').trim();
     const inputPrice = Number(data.get('inputPrice'));
     const outputPrice = Number(data.get('outputPrice'));
     const cacheRaw = String(data.get('cacheReadPrice') || '').trim();
-    const cacheReadPrice = cacheRaw === '' ? null : Number(cacheRaw);
+    const cacheReadPrice = cacheRaw === '' ? undefined : Number(cacheRaw);
 
-    if (!modelId || !name) {
+    if ((!editing && !modelId) || !name) {
       setError('Model id dan nama wajib diisi.');
       return;
     }
-    if (!isPrice(inputPrice) || !isPrice(outputPrice) || (cacheReadPrice != null && !isPrice(cacheReadPrice))) {
+    if (!isPrice(inputPrice) || !isPrice(outputPrice) || (cacheReadPrice !== undefined && !isPrice(cacheReadPrice))) {
       setError('Harga harus berupa angka nol atau lebih.');
       return;
     }
 
     setError(null);
     onSave({
-      modelId,
+      ...(!editing && { modelId }),
       name,
       inputPrice,
       outputPrice,
-      cacheReadPrice,
+      // Empty cache is omitted. The backend rejects `null` (`toNumber` does
+      // not allow null) and treats a missing key as "leave the column alone".
+      ...(cacheReadPrice !== undefined && { cacheReadPrice }),
       isActive: model?.isActive ?? true,
     });
   }

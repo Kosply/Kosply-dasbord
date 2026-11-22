@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, Ban, Check, Pencil, RefreshCcw } from 'lucide-react';
+import { AlertTriangle, Ban, Check, Pencil } from 'lucide-react';
 
 /**
  * @title ActionButton
@@ -19,7 +19,6 @@ import { AlertTriangle, Ban, Check, Pencil, RefreshCcw } from 'lucide-react';
 /** @notice Icon registry keyed by the serialisable `icon` prop. */
 const ICONS = {
   warning: AlertTriangle,
-  escalate: RefreshCcw,
   ban: Ban,
   check: Check,
   edit: Pencil,
@@ -37,7 +36,7 @@ const variantStyles = {
 /**
  * @notice Renders one icon-only action button.
  * @param {object} props Component properties.
- * @param {'warning' | 'escalate' | 'ban' | 'check' | 'edit'} props.icon Registry key of the icon to render.
+ * @param {'warning' | 'ban' | 'check' | 'edit'} props.icon Registry key of the icon to render.
  * @param {'purple' | 'amber' | 'orange' | 'red' | 'green'} [props.variant='purple'] Colour treatment.
  * @param {() => void} [props.onClick] Click handler (a Server Action reference is allowed).
  * @param {string} props.label Accessible label; also used as the tooltip.

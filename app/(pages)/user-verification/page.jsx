@@ -1,12 +1,12 @@
 import Layout from '@/components/layout/Layout';
 import Card from '@/components/ui/Card';
 import Table from '@/components/ui/Table';
-import ActionButton from '@/components/ui/ActionButton';
 import QueryDropdown from '@/components/ui/Dropdown';
 import SearchField from '@/components/ui/SearchField';
 import EmptyState from '@/components/states/EmptyState';
 import ErrorState from '@/components/states/ErrorState';
-import RejectButton from '@/components/verification/RejectButton';
+import IdScanPreview from '@/components/verification/IdScanPreview';
+import VerificationActions from '@/components/verification/VerificationActions';
 import { reviewVerificationAction } from '@/app/_actions/verifications';
 import { listVerifications } from '@/lib/resources/verifications';
 import { formatStatusLabel } from '@/lib/utils/format';
@@ -143,14 +143,11 @@ export default async function UserVerificationPage({ searchParams }) {
                   {verification.programStudi}
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 sm:px-6 sm:py-4">
-                  <a
-                    href={verification.ktmImageUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium text-brand underline-offset-2 hover:underline"
-                  >
-                    Open ID Card Scan
-                  </a>
+                  <IdScanPreview
+                    url={verification.ktmImageUrl}
+                    name={verification.namaLengkap}
+                    nim={verification.nim}
+                  />
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 text-sm sm:px-6 sm:py-4">
                   <span
@@ -167,18 +164,11 @@ export default async function UserVerificationPage({ searchParams }) {
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 sm:px-6 sm:py-4">
                   {verification.status === 'PENDING' ? (
-                    <div className="flex gap-2">
-                      <ActionButton
-                        icon="check"
-                        variant="purple"
-                        label="Verifikasi mahasiswa"
-                        action={reviewVerificationAction.bind(null, verification.id, 'APPROVE')}
-                      />
-                      <RejectButton
-                        applicantName={verification.namaLengkap}
-                        onReject={reviewVerificationAction.bind(null, verification.id, 'REJECT')}
-                      />
-                    </div>
+                    <VerificationActions
+                      name={verification.namaLengkap}
+                      onApprove={reviewVerificationAction.bind(null, verification.id, 'APPROVE')}
+                      onReject={reviewVerificationAction.bind(null, verification.id, 'REJECT')}
+                    />
                   ) : (
                     <span className="text-xs text-gray-400">Selesai</span>
                   )}
